@@ -105,11 +105,12 @@ class vidyo (
   # Publish custom handlers
 
   # Download and copy VidyoAddinInstaller to install folder
-  pget {'Download Client add-in':
-    source         => 'https://www.dropbox.com/s/nemyncojolnl6sz/VidyoAddinInstaller_1.1.1.0.msi?dl=1',
-    target         => $cache_dir,
-    targetfilename => 'vidyoaddininstaller.msi',
-    overwrite      => true,
+  exec {'Download Client add-in':
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://www.dropbox.com/s/nemyncojolnl6sz/VidyoAddinInstaller_1.1.1.0.msi?dl=1','${cache_dir}/vidyoaddininstaller.msi')",
+    path     => $::path,
+    cwd      => $::system32,
+    timeout  => 900,
+    provider => powershell,
   }
 
   # Create test workgroups?
