@@ -2,6 +2,11 @@
 #
 # Installs and configures ININ's Vidyo integration server
 #
+# Requirements:
+#   CIC Server 2015R4+
+#   .Net 4.5.1
+#   Interaction Desktop
+#
 # === Parameters
 #
 # Document parameters here.
@@ -9,34 +14,74 @@
 # [*ensure*]
 #   only installed is supported at this time
 #
-# [*router*]
-#   Specify the vidyo router name
+# [*endpointurl*]
+#   Specify the integration server endpoint url (i.e. http://server:8000). Default: http://<current machine name>:8000
 #
-# [*routeradmin*]
-#   Specify the router admin username
+# [*vidyoserver*]
+#   Specify the name or IP address of the vidyo portal server
 #
-# [*routerpassword*]
-#   Specify the password for the router admin username
+# [*vidyoadmin*]
+#   Specify the Vidyo admin username. Default: admin
+#
+# [*vidyopassword*]
+#   Specify the password for the vidyo admin
 #
 # [*replayserver*]
 #   Specify (if it exists) the vidyo replay server name
 #
 # [*replayadmin*]
-#   Specify the replay admin username
+#   Specify the replay admin username. Default: admin
 #
 # [*replaypassword*]
 #   Specify the password for the replay admin username
 #
+# [*webbaseurl*]
+#   Specify the base url to access the web page that initiates the video conversation (i.e. http://IIS/vidyoweb). Default value: http://<current machine name>/vidyoweb (if IIS is installed on the local machine)
+#
+# [*roomgroup*]
+#   Specify the name of the Vidyo room group to use when creating rooms. This is purely for identification purposes, but the group must exist on the Vidyo server or the integration will be unable to create rooms. Default value: VidyoIntegrationGroup
+#
+# [*roomowner*]
+#   Specify the default account to use as the room owner when creating rooms. This can be any account. This is typically configured to be the same as the Vidyo integration admin user. Default value: same as vidyoadmin
+#
+# [*extensionprefix*]
+#   Specify the default extension prefix.
+#
+# [*cicserver*]
+#   Specify the IP or server name of your CIC server. Default: localhost
+#
+# [*usewindowsauth*]
+#   Specify whether windows authentication should be used to connect to CIC. If this is set to true, Windows authentication will be used and cicusername and cicpassword values will be ignored. Default: false
+#
+# [*cicusername*]
+#   Specify the CIC username to use for this integration. Default: vagrant
+#
+# [*cicpassword*]
+#   Specify the CIC user password. Default: 1234
+#
+# [*enablescreenrecording*]
+#   Specify whether screen recordings should be initiated when an agent picks up the generic object. This is used to then have IR store data about the Vidyo conversation. Default: false
+#
 # === Examples
 #
 #  class { 'vidyo':
-#    ensure         => installed,
-#    router         => vidyorouter,
-#    routeradmin    => 'admin',
-#    routerpassword => 'password',
-#    replayserver   => vidyoreplay,
-#    replayadmin    => 'admin',
-#    replaypassword => 'password',
+#    ensure                => installed,
+#    endpointurl           => 'http://integrationserver:8000',
+#    vidyoserver           => 'vidyoportal',
+#    vidyoadmin            => 'admin',
+#    vidyopassword         => 'password',
+#    replayserver          => 'vidyoreplay',
+#    replayadmin           => 'admin',
+#    replaypassword        => 'password',
+#    webbaseurl            => 'http://iis/vidyoweb',
+#    roomgroup             => 'VidyoIntegrationGroup',
+#    roomowner             => 'admin',
+#    extensionprefix       => '789',
+#    cicserver             => 'localhost',
+#    usewindowsauth        => false,
+#    cicusername           => 'cicadmin',
+#    cicpassword           => '1234',
+#    enablescreenrecording => true,
 #  }
 #
 # === Authors
@@ -49,12 +94,22 @@
 #
 class vidyo (
     $ensure = installed,
-    $router = 'vidyorouter',
-    $routeradmin = 'admin',
-    $routerpassword,
-    $replayserver = 'vidyoreplay',
+    $endpointurl = "http://${hostname}:8000",
+    $vidyoserver,
+    $vidyoadmin = 'admin',
+    $vidyopassword,
+    $replayserver,
     $replayadmin = 'admin',
     $replaypassword,
+    $webbaseurl = "http://${hostname}/vidyoweb",
+    $roomgroup = 'VidyoIntegrationGroup',
+    $roomowner = $vidyoadmin,
+    $extensionprefix,
+    $cicserver = 'localhost',
+    $usewindowsauth = false,
+    $cicusername = 'vagrant',
+    $cicpassword = '1234',
+    $enablescreenrecording = false,
 )
 {
 
@@ -100,7 +155,157 @@ class vidyo (
     require => Exec['Download Service Installer'],
   }
 
-  # Configure app.config
+  # Configure VidyoIntegrationWindowsService.exe.config
+  file_line {'Configure User Service Endpoint':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<endpoint address=\"http://${vidyoserver}/services/v1_1/VidyoPortalUserService/\"",
+    match    => '.*VIDYOAPISERVER.*VidyoPortalUserService.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  file_line {'Configure Admin Service Endpoint':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<endpoint address=\"http://${vidyoserver}/services/v1_1/VidyoPortalAdminService/\"",
+    match    => '.*VIDYOAPISERVER.*VidyoPortalAdminService.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  file_line {'Configure Guest Service Endpoint':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<endpoint address=\"http://${vidyoserver}/services/v1_1/VidyoPortalGuestService/\"",
+    match    => '.*VIDYOAPISERVER.*VidyoPortalGuestService.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  if ($replayserver) {
+    file_line {'Configure Replay Service Endpoint':
+      path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+      line     => "<endpoint address=\"http://${replayserver}/replay/services/VidyoReplayContentManagementService/\"",
+      match    => '.*VIDYOREPLAYSERVER.*VidyoReplayContentManagementService.*',
+      multiple => false,
+      require  => Package['vidyoserviceinstaller'],
+    }
+  }
+
+  file_line {'Configure CIC Server':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"CicServer\" value=\"${cicserver}\"/>",
+    match    => '.*CicServer.*CICSERVER.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  if ($usewindowsauth) {
+    file_line {'Enable CIC Use Windows Auth':
+      path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+      line     => "<add key=\"CicUseWindowsAuth\" value=\"true\"/>",
+      match    => '.*CicUseWindowsAuth.*',
+      multiple => false,
+      require  => Package['vidyoserviceinstaller'],
+    }
+  } else {
+    file_line {'Disable CIC Use Windows Auth':
+      path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+      line     => "<add key=\"CicUseWindowsAuth\" value=\"false\"/>",
+      match    => '.*CicUseWindowsAuth.*',
+      multiple => false,
+      require  => Package['vidyoserviceinstaller'],
+    }
+
+    file_line {'Configure CIC User':
+      path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+      line     => "<add key=\"CicUsername\" value=\"${cicusername}\"/>",
+      match    => '.*CicUsername.*',
+      multiple => false,
+      require  => Package['vidyoserviceinstaller'],
+    }
+
+    file_line {'Configure CIC Password':
+      path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+      line     => "<add key=\"CicPassword\" value=\"${cicpassword}\"/>",
+      match    => '.*CicPassword.*',
+      multiple => false,
+      require  => Package['vidyoserviceinstaller'],
+    }
+  }
+
+  file_line {'Configure Service Endpoint URL':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"CicServiceEndpointUri\" value=\"${endpointurl}\"/>",
+    match    => '.*CicServiceEndpointUri.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  file_line {'Configure Web Base Url':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"VidyoWebBaseUrl\" value=\"${webbaseurl}\"/>",
+    match    => '.*VidyoWebBaseUrl.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  file_line {'Configure Room Group':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"VidyoRoomGroup\" value=\"${roomgroup}\"/>",
+    match    => '.*VidyoRoomGroup.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  file_line {'Configure Room Owner':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"VidyoRoomOwner\" value=\"${roomowner}\"/>",
+    match    => '.*VidyoRoomOwner.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  file_line {'Configure Admin Username':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"VidyoAdminUsername\" value=\"${vidyoadmin}\"/>",
+    match    => '.*VidyoAdminUsername.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  file_line {'Configure Admin Password':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"VidyoAdminPassword\" value=\"${vidyopassword}\"/>",
+    match    => '.*VidyoAdminPassword.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  file_line {'Configure Service Endpoint Uri':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"VidyoServiceEndpointUri\" value=\"${endpointurl}\"/>",
+    match    => '.*VidyoServiceEndpointUri.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  file_line {'Configure Extension Prefix':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"VidyoExtensionPrefix\" value=\"${extensionprefix}\"/>",
+    match    => '.*VidyoExtensionPrefix.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  if ($enablescreenrecording == true) {
+    file_line {'Configure Screen Recording':
+      path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+      line     => "<add key=\"EnableScreenRecording\" value=\"1\"/>",
+      match    => '.*EnableScreenRecording.*',
+      multiple => false,
+      require  => Package['vidyoserviceinstaller'],
+    }
+  }
+
   # Enable CIC log 9999
   # Publish custom handlers
 

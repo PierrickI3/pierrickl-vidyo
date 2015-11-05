@@ -1,4 +1,19 @@
-class {'vidyo':
-  routerpassword => '1234',
-  replaypassword => '1234',
+class { 'vidyo':
+  ensure                => installed,
+  endpointurl           => 'http://integrationserver:8000',
+  vidyoserver           => 'vidyoportal',
+  vidyoadmin            => 'admin',
+  vidyopassword         => 'password',
+  replayserver          => 'vidyoreplay',
+  replayadmin           => 'admin',
+  replaypassword        => 'password',
+  webbaseurl            => 'http://iis/vidyoweb',
+  roomgroup             => 'VidyoIntegrationGroup',
+  roomowner             => 'admin',
+  extensionprefix       => '789',
+  cicserver             => 'localhost',
+  usewindowsauth        => false,
+  cicusername           => 'cicadmin',
+  cicpassword           => '1234',
+  enablescreenrecording => true,
 }
