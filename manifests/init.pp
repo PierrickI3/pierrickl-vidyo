@@ -128,6 +128,8 @@ class vidyo (
     }
   }
 
+  $lognumber = '9999' # Report log to activate on CIC for custom handler
+
   # Install firefox
   package {'firefox':
     ensure   => present,
@@ -307,7 +309,38 @@ class vidyo (
   }
 
   # Enable CIC log 9999
-  # Publish custom handlers
+  exec {'Enable Log 9999':
+    command  => template('vidyo/enablelog.ps1.erb'),
+    provider => powershell,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
+  # Download and publish custom handlers
+  exec {'Download Vidyo_SetRecordingAttributes.ihd':
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://www.dropbox.com/s/rurqgpftzn2byc3/Vidyo_SetRecordingAttributes.ihd?dl=1','${cache_dir}/Vidyo_SetRecordingAttributes.ihd')",
+    path     => $::path,
+    cwd      => $::system32,
+    timeout  => 900,
+    provider => powershell,
+  }
+
+  exec {'Download CustomGenericObjectDisconnect.ihd':
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://www.dropbox.com/s/4sxsug51g8a4gy2/CustomGenericObjectDisconnect.ihd?dl=1','${cache_dir}/CustomGenericObjectDisconnect.ihd')",
+    path     => $::path,
+    cwd      => $::system32,
+    timeout  => 900,
+    provider => powershell,
+  }
+
+  exec {'Publish Custom Handlers':
+    command  => template('vidyo/publishcustomhandlers.ps1.erb'),
+    provider => powershell,
+    require  => [
+      Package['vidyoserviceinstaller'],
+      Exec['Download Vidyo_SetRecordingAttributes.ihd'],
+      Exec['Download CustomGenericObjectDisconnect.ihd'],
+    ],
+  }
 
   # Download and copy VidyoAddinInstaller to install folder
   exec {'Download Client add-in':
@@ -318,11 +351,14 @@ class vidyo (
     provider => powershell,
   }
 
+  # install addin?
+
   # Create test workgroups?
   # Download and copy test web site to C:\inetpub\wwwroot\vidyoweb
     # Configure ininvid_serverRoot
     # Configure workgroups
   # Add custom stored procedure to SQL
+  # Start service
   # Add favorites to Firefox?
 
 }

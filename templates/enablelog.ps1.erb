@@ -1,0 +1,7 @@
+# Get Attendant Root registry key
+$sitePath = (Get-ItemProperty 'HKLM:\SOFTWARE\Wow6432Node\Interactive Intelligence\EIC\Directory Services\Root').SITE
+$reportsLogsPath = "HKLM:\SOFTWARE\Wow6432Node\Interactive Intelligence\EIC\Directory Services\Root$sitePath\Production\Configuration\Report Logs"
+$reportLogPath = "$reportsLogsPath\<%= @lognumber %>"
+
+# Set Active to yes (REG_MULTI_SZ)
+Set-ItemProperty -Path $reportLogPath -Name Active -Value "Yes"

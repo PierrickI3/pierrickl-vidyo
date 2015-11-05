@@ -1,0 +1,6 @@
+$handlerFile = "<%= @cache_dir %>\handlers.lst"
+If (Test-Path $handlerFile){
+	Remove-Item $handlerFile
+}
+Add-Content $handlerFile "<%= @cache_dir %>\Vidyo_SetRecordingAttributes.ihd`n`r<%= @cache_dir %>\CustomGenericObjectDisconnect.ihd"
+idu /publish:$handlerFile
