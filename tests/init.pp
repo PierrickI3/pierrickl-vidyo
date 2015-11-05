@@ -16,4 +16,5 @@ class { 'vidyo':
   cicusername           => 'cicadmin',
   cicpassword           => '1234',
   enablescreenrecording => true,
+  addininstall          => true,
 }

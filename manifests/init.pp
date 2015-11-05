@@ -62,6 +62,9 @@
 # [*enablescreenrecording*]
 #   Specify whether screen recordings should be initiated when an agent picks up the generic object. This is used to then have IR store data about the Vidyo conversation. Default: false
 #
+# [*addininstall*]
+#   Specify whether the Vidyo addin should be installed locally. Default: false
+#
 # === Examples
 #
 #  class { 'vidyo':
@@ -82,6 +85,7 @@
 #    cicusername           => 'cicadmin',
 #    cicpassword           => '1234',
 #    enablescreenrecording => true,
+#    addininstall          => false,
 #  }
 #
 # === Authors
@@ -110,6 +114,7 @@ class vidyo (
     $cicusername = 'vagrant',
     $cicpassword = '1234',
     $enablescreenrecording = false,
+    $addininstall = false,
 )
 {
 
@@ -117,6 +122,8 @@ class vidyo (
   {
     err('This module works on Windows only!')
     fail('Unsupported OS')
+  } else {
+    File { source_permissions => ignore } # Required for windows
   }
 
   $cache_dir = hiera('core::cache_dir', 'c:/users/vagrant/appdata/local/temp') # If I use c:/windows/temp then a circular dependency occurs when used with SQL
@@ -129,6 +136,7 @@ class vidyo (
   }
 
   $lognumber = '9999' # Report log to activate on CIC for custom handler
+  $addinfinallocation = 'C:/I3/IC/Utilities/' # Where the addin msi is copied to
 
   # Install firefox
   package {'firefox':
@@ -351,12 +359,33 @@ class vidyo (
     provider => powershell,
   }
 
-  # install addin?
+  file {"${addinfinallocation}/VidyoAddinInstaller.msi":
+    ensure  => present,
+    source  => "${cache_dir}/vidyoaddininstaller.msi",
+    require => Exec['Download Client add-in'],
+  }
 
-  # Create test workgroups?
-  # Download and copy test web site to C:\inetpub\wwwroot\vidyoweb
+  # install addin
+  if ($addininstall) {
+    package {'Install Vidyo Addin':
+      ensure => installed,
+      source => "${addinfinallocation}/vidyoaddininstaller.msi",
+      install_options => [
+        '/l*v',
+        'C:\\windows\\logs\\addininstall.log',
+        { 'INSTALLLOCATION' => 'C:\\I3\\IC\\SERVER\\Addins'},
+      ],
+      require => File["${addinfinallocation}/VidyoAddinInstaller.msi"],
+    }
+  }
+
+  # Download and copy sample web site to C:\inetpub\wwwroot\vidyoweb
+
+  # Download and copy generic customer web site to C:\inetpub\wwwroot\vidyo
     # Configure ininvid_serverRoot
     # Configure workgroups
+
+  # Create test workgroups?
   # Add custom stored procedure to SQL
   # Start service
   # Add favorites to Firefox?
