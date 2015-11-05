@@ -147,7 +147,7 @@ class vidyo (
 
   # Copy MSIs from Dropbox
   exec {'Download Service Installer':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://www.dropbox.com/s/b7j1kawd51wycs2/VidyoIntegrationServiceInstaller_1.1.1.0.msi?dl=1','${cache_dir}/vidyoserviceinstaller.msi')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5963&authkey=!AON7UCxL06q40Mk&ithint=file%2cmsi','${cache_dir}/vidyoserviceinstaller.msi')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -325,7 +325,7 @@ class vidyo (
 
   # Download and publish custom handlers
   exec {'Download Vidyo_SetRecordingAttributes.ihd':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://www.dropbox.com/s/rurqgpftzn2byc3/Vidyo_SetRecordingAttributes.ihd?dl=1','${cache_dir}/Vidyo_SetRecordingAttributes.ihd')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5961&authkey=!AGBHiIXvCW5mDf4&ithint=file%2cihd','${cache_dir}/Vidyo_SetRecordingAttributes.ihd')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -333,7 +333,7 @@ class vidyo (
   }
 
   exec {'Download CustomGenericObjectDisconnect.ihd':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://www.dropbox.com/s/4sxsug51g8a4gy2/CustomGenericObjectDisconnect.ihd?dl=1','${cache_dir}/CustomGenericObjectDisconnect.ihd')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5962&authkey=!AM5Z68qPhAl9wJc&ithint=file%2cihd','${cache_dir}/CustomGenericObjectDisconnect.ihd')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -352,7 +352,7 @@ class vidyo (
 
   # Download and copy VidyoAddinInstaller to install folder
   exec {'Download Client add-in':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://www.dropbox.com/s/nemyncojolnl6sz/VidyoAddinInstaller_1.1.1.0.msi?dl=1','${cache_dir}/vidyoaddininstaller.msi')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5960&authkey=!AFFKpxg-HSAx4Jo&ithint=file%2cmsi','${cache_dir}/vidyoaddininstaller.msi')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -380,12 +380,30 @@ class vidyo (
   }
 
   # Download and copy sample web site to C:\inetpub\wwwroot\vidyoweb
+  exec {'Download sample web site':
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5964&authkey=!AMS4ku2lPI487-s&ithint=file%2czip','${cache_dir}/vidyoweb.zip')",
+    path     => $::path,
+    cwd      => $::system32,
+    timeout  => 900,
+    provider => powershell,
+  }
+
+  unzip {"${cache_dir}/vidyoweb.zip":
+    destination => 'C:/inetpub/wwwroot/vidyoweb',
+    creates     => 'C:/inetpub/wwwroot/vidyoweb/index.html',
+    require     => Exec['Download sample web site'],
+  }
+
+  # Create web site for vidyoweb
+
+  # Create test workgroups?
 
   # Download and copy generic customer web site to C:\inetpub\wwwroot\vidyo
     # Configure ininvid_serverRoot
     # Configure workgroups
 
-  # Create test workgroups?
+  # Create web site for generic customer site
+
   # Add custom stored procedure to SQL
   # Start service
   # Add favorites to Firefox?
