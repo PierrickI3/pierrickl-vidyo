@@ -145,6 +145,10 @@ class vidyo (
     #onlyif   => "if ((Get-ItemProperty (\"hklm:\\software\\Wow6432Node\\mozilla.org\\Mozilla\") -name CurrentVersion | Select -exp CurrentVersion) -gt 42) {exit 1}", # Don't run if firefox v42 or greater has already been installed
   }
 
+  ###################################
+  # Integration Server Installation #
+  ###################################
+
   # Copy MSIs from Dropbox
   exec {'Download Service Installer':
     command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5963&authkey=!AON7UCxL06q40Mk&ithint=file%2cmsi','${cache_dir}/vidyoserviceinstaller.msi')",
@@ -165,7 +169,10 @@ class vidyo (
     require => Exec['Download Service Installer'],
   }
 
-  # Configure VidyoIntegrationWindowsService.exe.config
+  ####################################
+  # Integration Server Configuration #
+  ####################################
+
   file_line {'Configure User Service Endpoint':
     path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
     line     => "<endpoint address=\"http://${vidyoserver}/services/v1_1/VidyoPortalUserService/\"",
@@ -316,6 +323,10 @@ class vidyo (
     }
   }
 
+  ###################
+  # Custom Handlers #
+  ###################
+
   # Enable CIC log 9999
   exec {'Enable Log 9999':
     command  => template('vidyo/enablelog.ps1.erb'),
@@ -323,7 +334,6 @@ class vidyo (
     require  => Package['vidyoserviceinstaller'],
   }
 
-  # Download and publish custom handlers
   exec {'Download Vidyo_SetRecordingAttributes.ihd':
     command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5961&authkey=!AGBHiIXvCW5mDf4&ithint=file%2cihd','${cache_dir}/Vidyo_SetRecordingAttributes.ihd')",
     path     => $::path,
@@ -349,6 +359,10 @@ class vidyo (
       Exec['Download CustomGenericObjectDisconnect.ihd'],
     ],
   }
+
+  ######################
+  # Vidyo Client Addin #
+  ######################
 
   # Download and copy VidyoAddinInstaller to install folder
   exec {'Download Client add-in':
@@ -379,8 +393,12 @@ class vidyo (
     }
   }
 
+  #################
+  # VidyoWeb Site #
+  #################
+
   # Download and copy sample web site to C:\inetpub\wwwroot\vidyoweb
-  exec {'Download sample web site':
+  exec {'Download vidyoweb web site':
     command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5964&authkey=!AMS4ku2lPI487-s&ithint=file%2czip','${cache_dir}/vidyoweb.zip')",
     path     => $::path,
     cwd      => $::system32,
@@ -391,18 +409,63 @@ class vidyo (
   unzip {"${cache_dir}/vidyoweb.zip":
     destination => 'C:/inetpub/wwwroot/vidyoweb',
     creates     => 'C:/inetpub/wwwroot/vidyoweb/index.html',
-    require     => Exec['Download sample web site'],
+    require     => Exec['Download vidyoweb web site'],
   }
 
-  # Create web site for vidyoweb
+  # Give Write privileges to IUSR account. Permissions are inherited downstream to subfolders.
+  acl {'C:/inetpub/wwwroot':
+    permissions => [
+      {identity => 'IIS_IUSRS', rights => ['read']},
+      {identity => 'IUSR',      rights => ['write']},
+    ],
+    require     => Unzip["${cache_dir}/vidyoweb.zip"],
+  }
 
-  # Create test workgroups?
+  # Create vidyo workgroup
 
-  # Download and copy generic customer web site to C:\inetpub\wwwroot\vidyo
-    # Configure ininvid_serverRoot
-    # Configure workgroups
+  #################
+  # ININ Web Site #
+  #################
 
-  # Create web site for generic customer site
+  # Download and copy generic (inin) customer web site to C:\inetpub\wwwroot\inin
+  exec {'Download inin web site':
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5966&authkey=!AMeMAnn9ZeCRN5A&ithint=file%2czip','${cache_dir}/ininweb.zip')",
+    path     => $::path,
+    cwd      => $::system32,
+    timeout  => 900,
+    provider => powershell,
+  }
+
+  unzip {"${cache_dir}/ininweb.zip":
+    destination => 'C:/inetpub/wwwroot/inin',
+    creates     => 'C:/inetpub/wwwroot/inin/index.html',
+    require     => Exec['Download inin web site'],
+  }
+
+  # Configure ininvid_serverRoot in index.html, acdwait.html, injector.js
+  file_line {'Configure ininvid_serverRoot in index.html':
+    path     => 'C:/inetpub/wwwroot/inin/index.html',
+    line     => "var ininvid_serverRoot = 'http://${hostname}:8000';",
+    match    => '.*var ininvid_serverRoot.*',
+    multiple => false,
+    require  => Unzip["${cache_dir}/ininweb.zip"],
+  }
+
+  file_line {'Configure ininvid_serverRoot in acdwait.html':
+    path     => 'C:/inetpub/wwwroot/inin/acdwait.html',
+    line     => "var ininvid_serverRoot = 'http://${hostname}:8000';",
+    match    => '.*var ininvid_serverRoot.*',
+    multiple => false,
+    require  => Unzip["${cache_dir}/ininweb.zip"],
+  }
+
+  file_line {'Configure ininvid_serverRoot in injector.js':
+    path     => 'C:/inetpub/wwwroot/inin/ininvid/injector.js',
+    line     => "var ininvid_serverRoot = 'http://${hostname}:8000';",
+    match    => '.*var ininvid_serverRoot.*',
+    multiple => false,
+    require  => Unzip["${cache_dir}/ininweb.zip"],
+  }
 
   # Add custom stored procedure to SQL
   # Start service
