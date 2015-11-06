@@ -313,6 +313,14 @@ class vidyo (
     require  => Package['vidyoserviceinstaller'],
   }
 
+  file_line {'Configure Has Replay Server':
+    path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
+    line     => "<add key=\"HasReplayServer\" value=\"${hasreplayserver}\"/>",
+    match    => '.*HasReplayServer.*',
+    multiple => false,
+    require  => Package['vidyoserviceinstaller'],
+  }
+
   if ($enablescreenrecording == true) {
     file_line {'Configure Screen Recording':
       path     => 'C:/Program Files (x86)/Interactive Intelligence/Vidyo Integration Service/VidyoIntegrationWindowsService.exe.config',
@@ -421,7 +429,7 @@ class vidyo (
     require     => Unzip["${cache_dir}/vidyoweb.zip"],
   }
 
-  # Create vidyo workgroup
+  # Create vidyo workgroup?
 
   #################
   # ININ Web Site #
@@ -429,7 +437,7 @@ class vidyo (
 
   # Download and copy generic (inin) customer web site to C:\inetpub\wwwroot\inin
   exec {'Download inin web site':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5966&authkey=!AMeMAnn9ZeCRN5A&ithint=file%2czip','${cache_dir}/ininweb.zip')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5968&authkey=!ACakNrqbSG0IF7U&ithint=file%2czip','${cache_dir}/ininweb.zip')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -467,8 +475,98 @@ class vidyo (
     require  => Unzip["${cache_dir}/ininweb.zip"],
   }
 
-  # Add custom stored procedure to SQL
-  # Start service
-  # Add favorites to Firefox?
+  # Add shortcut to desktop. Should probably move this to a template.
+  file {'Add Desktop Shortcut Script':
+    ensure  => present,
+    path    => "${cache_dir}\\createininshortcut.ps1",
+    content => "
+      function CreateShortcut(\$AppLocation, \$description){
+        \$WshShell = New-Object -ComObject WScript.Shell
+        \$Shortcut = \$WshShell.CreateShortcut(\"\$env:USERPROFILE\\Desktop\\\$description.url\")
+        \$Shortcut.TargetPath = \$AppLocation
+        #\$Shortcut.Description = \$description
+        \$Shortcut.Save()
+      }
+
+      CreateShortcut \"http://${hostname}/inin\" \"Vidyo ININ\"
+      ",
+  }
+
+  # Add shortcut to fake ININ web site on desktop
+  exec {'Add ININ Web Desktop Shortcut':
+    command  => "${cache_dir}\\createininshortcut.ps1",
+    provider => powershell,
+    timeout  => 1800,
+    require  => [
+      File['Add Desktop Shortcut Script'],
+      Service['Start Integration Server Service'],
+    ],
+  }
+
+  ########################
+  # SQL Stored Procedure #
+  ########################
+
+  exec {'Download Custom Stored Procedure':
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5967&authkey=!ALUAsX1Jb9SHjqg&ithint=file%2csql','${cache_dir}/vidyo_set_custom_attribute.sql')",
+    path     => $::path,
+    cwd      => $::system32,
+    timeout  => 900,
+    provider => powershell,
+  }
+
+  exec {'Download SQL Powershell Tools':
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://download.microsoft.com/download/1/3/0/13089488-91FC-4E22-AD68-5BE58BD5C014/ENU/x86/PowerShellTools.msi','${cache_dir}/PowerShellTools.msi')",
+    path     => $::path,
+    cwd      => $::system32,
+    timeout  => 900,
+    provider => powershell,
+  }
+
+  package {'Install SQL Powershell Tools':
+    ensure          => installed,
+    source          => "${cache_dir}/PowerShellTools.msi",
+    install_options => [
+      '/l*v',
+      'C:\\windows\\logs\\powershelltools.log',
+    ],
+    require         => Exec['Download SQL Powershell Tools'],
+  }
+
+  exec {'Add Custom Stored Procedure':
+    command  => template('vidyo/addstoredprocedure.ps1.erb'),
+    provider => powershell,
+    require  => [
+      Exec['Download Custom Stored Procedure'],
+      Package['Install SQL Powershell Tools'],
+    ],
+  }
+
+  #################
+  # Start service #
+  #################
+
+  service {'Start Integration Server Service':
+    ensure  => running,
+    enable  => true,
+    name    => 'VidyoIntegrationService',
+    require => [
+      File_Line['Configure User Service Endpoint'],
+      File_Line['Configure Admin Service Endpoint'],
+      File_Line['Configure Guest Service Endpoint'],
+      File_Line['Configure CIC Server'],
+      File_Line['Configure Service Endpoint URL'],
+      File_Line['Configure Web Base Url'],
+      File_Line['Configure Room Group'],
+      File_Line['Configure Room Owner'],
+      File_Line['Configure Admin Username'],
+      File_Line['Configure Admin Password'],
+      File_Line['Configure Service Endpoint Uri'],
+      File_Line['Configure Extension Prefix'],
+      File_Line['Configure Has Replay Server'],
+      Exec['Add Custom Stored Procedure'],
+      Exec['Publish Custom Handlers'],
+    ],
+  }
 
 }

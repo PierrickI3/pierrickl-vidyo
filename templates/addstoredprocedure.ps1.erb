@@ -1,0 +1,61 @@
+Import-Module sqlps -DisableNameChecking
+
+# Connect to I3_IC
+$srv = new-Object Microsoft.SqlServer.Management.Smo.Server("(local)")
+$db = Get-Item SQLSERVER:\sql\localhost\default\databases\I3_IC
+
+# Check if the stored procedure exists already
+$storedproc = $db.StoredProcedures.Item("vidyo_set_custom_attribute")
+
+If ($storedproc)
+{
+  try
+  {
+    $storedproc.Drop();
+  }
+  catch
+  {
+  }
+}
+
+# Create Stored Procedure
+$sp  = New-Object -TypeName Microsoft.SqlServer.Management.SMO.StoredProcedure -argumentlist $db, "vidyo_set_custom_attribute"
+
+#Set the TextMode property to false and then set the other object properties
+$sp.TextMode = $false
+$sp.AnsiNullsStatus = $false
+$sp.QuotedIdentifierStatus = $false
+
+# Add three parameters
+$type = [Microsoft.SqlServer.Management.SMO.Datatype]::UniqueIdentifier
+$param  = New-Object -TypeName Microsoft.SqlServer.Management.SMO.StoredProcedureParameter -argumentlist $sp,"@RecordingGuid",$type
+$sp.Parameters.Add($param)
+
+$type = [Microsoft.SqlServer.Management.SMO.DataType]::NVarChar(255)
+$param2  = New-Object -TypeName Microsoft.SqlServer.Management.SMO.StoredProcedureParameter -argumentlist $sp,"@CustomAttributeName",$type
+$sp.Parameters.Add($param2)
+
+$type = [Microsoft.SqlServer.Management.SMO.DataType]::NVarChar(255)
+$param3  = New-Object -TypeName Microsoft.SqlServer.Management.SMO.StoredProcedureParameter -argumentlist $sp,"@CustomAttributeValue",$type
+$sp.Parameters.Add($param3)
+
+#Set the TextBody property to define the stored procedure.
+$sp.TextBody = @"
+SET NOCOUNT ON;
+DECLARE @CustomAttributeNameId int
+-- Insert AttributeName if it does not exist
+IF (SELECT COUNT(*) FROM IR_CustomAttributeName WHERE Name=@CustomAttributeName) = 0
+BEGIN
+        INSERT INTO IR_CustomAttributeName (Name) VALUES (@CustomAttributeName)
+END
+-- Get Custom Attribute Name Id
+SET @CustomAttributeNameId = (SELECT CustomAttributeNameId FROM IR_CustomAttributeName WHERE Name = @CustomAttributeName
+)
+-- Insert Custom Attribute Value
+INSERT INTO IR_CustomAttribute
+        (RecordingId, CustomAttributeNameId, Value, Version) VALUES
+        (@RecordingGuid, @CustomAttributeNameId, @CustomAttributeValue, 1)
+"@
+
+# Create the stored procedure
+$sp.Create()
