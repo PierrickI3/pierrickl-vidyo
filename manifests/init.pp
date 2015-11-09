@@ -9,8 +9,6 @@
 #
 # === Parameters
 #
-# Document parameters here.
-#
 # [*ensure*]
 #   only installed is supported at this time
 #
@@ -387,7 +385,7 @@ class vidyo (
     require => Exec['Download Client add-in'],
   }
 
-  # install addin
+  # Install addin
   if ($addininstall) {
     package {'Install Vidyo Addin':
       ensure => installed,
@@ -487,9 +485,16 @@ class vidyo (
         #\$Shortcut.Description = \$description
         \$Shortcut.Save()
       }
-
       CreateShortcut \"http://${hostname}/inin\" \"Vidyo ININ\"
       ",
+  }
+
+  # Add .pkg to Mime Types on IIS (otherwise MacOS X app cannot be downloaded)
+  exec{'Configure pkg Mime Type':
+    command => "cmd.exe /c \"%windir%\system32\inetsrv\appcmd set config \"Default Web Site/vidyoweb\" -section:staticContent /+\"[fileExtension='.pkg',mimeType='application/octet-stream']\""
+    path    => $::path,
+    cwd     => $::system32,
+    unless  => "cmd.exe /c \"%windir%\\system32\\inetsrv\\appcmd list config \"Default Web Site/vidyoweb\" -section:staticContent | findstr /l .pkg\"",
   }
 
   # Add shortcut to fake ININ web site on desktop
