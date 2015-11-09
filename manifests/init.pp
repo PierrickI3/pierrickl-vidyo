@@ -546,10 +546,13 @@ class vidyo (
   # Start service #
   #################
 
-  service {'Start Integration Server Service':
-    ensure  => running,
-    enable  => true,
-    name    => 'VidyoIntegrationService',
+  # Add Interaction Center dependency (CIC needs to start before the integration server)
+  #sc config [service name] depend= <Dependencies(separated by / (forward slash))>
+  exec {'Add Interaction Center Dependency':
+    command  => 'cmd /c "sc config \"VidyoIntegrationService\" depend=\"Interaction Center\""',
+    path     => $::path,
+    cwd      => $::system32,
+    provider => windows,
     require => [
       File_Line['Configure User Service Endpoint'],
       File_Line['Configure Admin Service Endpoint'],
@@ -567,6 +570,13 @@ class vidyo (
       Exec['Add Custom Stored Procedure'],
       Exec['Publish Custom Handlers'],
     ],
+  }
+
+  service {'Start Integration Server Service':
+    ensure  => running,
+    enable  => true,
+    name    => 'VidyoIntegrationService',
+    require => Exec['Add Interaction Center Dependency'],
   }
 
 }
