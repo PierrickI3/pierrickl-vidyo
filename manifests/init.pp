@@ -337,11 +337,10 @@ class vidyo (
   exec {'Enable Log 9999':
     command  => template('vidyo/enablelog.ps1.erb'),
     provider => powershell,
-    require  => Package['vidyoserviceinstaller'],
   }
 
-  exec {'Download Vidyo_SetRecordingAttributes.ihd':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5961&authkey=!AGBHiIXvCW5mDf4&ithint=file%2cihd','${cache_dir}/Vidyo_SetRecordingAttributes.ihd')",
+  exec {'Download Vidyo_SetRecordingAttributes.i3pub':
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5976&authkey=!AAt-9yqo7AwWxU0&ithint=file%2ci3pub','${cache_dir}/Vidyo_SetRecordingAttributes.i3pub')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -349,20 +348,32 @@ class vidyo (
   }
 
   exec {'Download CustomGenericObjectDisconnect.ihd':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5962&authkey=!AM5Z68qPhAl9wJc&ithint=file%2cihd','${cache_dir}/CustomGenericObjectDisconnect.ihd')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5977&authkey=!AAMdH_SfAFNIwug&ithint=file%2ci3pub','${cache_dir}/CustomGenericObjectDisconnect.i3pub')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
     provider => powershell,
   }
 
-  exec {'Publish Custom Handlers':
-    command  => template('vidyo/publishcustomhandlers.ps1.erb'),
+  exec {'Publish Vidyo_SetRecordingAttributes':
+    command  => "EicPublisherU /noprompts ${cache_dir}/Vidyo_SetRecordingAttributes.i3pub",
+    path     => $::path,
+    cwd      => $::system32,
     provider => powershell,
     require  => [
       Package['vidyoserviceinstaller'],
       Exec['Download Vidyo_SetRecordingAttributes.ihd'],
+    ],
+  }
+
+  exec {'Publish CustomGenericObjectDisconnect':
+    command  => "EicPublisherU /noprompts ${cache_dir}/CustomGenericObjectDisconnect.i3pub",
+    path     => $::path,
+    cwd      => $::system32,
+    provider => powershell,
+    require  => [
       Exec['Download CustomGenericObjectDisconnect.ihd'],
+      Exec['Publish Vidyo_SetRecordingAttributes'],
     ],
   }
 
