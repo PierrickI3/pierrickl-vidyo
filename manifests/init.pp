@@ -347,7 +347,7 @@ class vidyo (
     provider => powershell,
   }
 
-  exec {'Download CustomGenericObjectDisconnect.ihd':
+  exec {'Download CustomGenericObjectDisconnect.i3pub':
     command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5977&authkey=!AAMdH_SfAFNIwug&ithint=file%2ci3pub','${cache_dir}/CustomGenericObjectDisconnect.i3pub')",
     path     => $::path,
     cwd      => $::system32,
@@ -362,7 +362,7 @@ class vidyo (
     provider => powershell,
     require  => [
       Package['vidyoserviceinstaller'],
-      Exec['Download Vidyo_SetRecordingAttributes.ihd'],
+      Exec['Download Vidyo_SetRecordingAttributes.i3pub'],
     ],
   }
 
@@ -372,7 +372,7 @@ class vidyo (
     cwd      => $::system32,
     provider => powershell,
     require  => [
-      Exec['Download CustomGenericObjectDisconnect.ihd'],
+      Exec['Download CustomGenericObjectDisconnect.i3pub'],
       Exec['Publish Vidyo_SetRecordingAttributes'],
     ],
   }
@@ -439,6 +439,7 @@ class vidyo (
   }
 
   # Create vidyo workgroup?
+  # TODO Add parameter to specify workgroup(s) used
 
   #################
   # ININ Web Site #
@@ -563,7 +564,6 @@ class vidyo (
   #################
 
   # Add Interaction Center dependency (CIC needs to start before the integration server)
-  #sc config [service name] depend= <Dependencies(separated by / (forward slash))>
   exec {'Add Interaction Center Dependency':
     command  => 'cmd /c "sc config \"VidyoIntegrationService\" depend=\"Interaction Center\""',
     path     => $::path,
@@ -588,6 +588,7 @@ class vidyo (
     ],
   }
 
+  # Finally, we can start the service
   service {'Start Integration Server Service':
     ensure  => running,
     enable  => true,
