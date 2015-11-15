@@ -107,7 +107,7 @@ class vidyo (
     $roomgroup = 'VidyoIntegrationGroup',
     $roomowner = $vidyoadmin,
     $extensionprefix,
-    $cicserver = 'localhost',
+    $cicserver = $hostname,
     $usewindowsauth = false,
     $cicusername = 'vagrant',
     $cicpassword = '1234',
@@ -503,7 +503,7 @@ class vidyo (
 
   # Add .pkg to Mime Types on IIS (otherwise MacOS X app cannot be downloaded)
   exec{'Configure pkg Mime Type':
-    command => "cmd.exe /c \"%windir%\system32\inetsrv\appcmd set config \"Default Web Site/vidyoweb\" -section:staticContent /+\"[fileExtension='.pkg',mimeType='application/octet-stream']\""
+    command => "cmd.exe /c \"%windir%\\system32\\inetsrv\\appcmd set config \"Default Web Site/vidyoweb\" -section:staticContent /+\"[fileExtension='.pkg',mimeType='application/octet-stream']\"",
     path    => $::path,
     cwd     => $::system32,
     unless  => "cmd.exe /c \"%windir%\\system32\\inetsrv\\appcmd list config \"Default Web Site/vidyoweb\" -section:staticContent | findstr /l .pkg\"",
@@ -584,7 +584,8 @@ class vidyo (
       File_Line['Configure Extension Prefix'],
       File_Line['Configure Has Replay Server'],
       Exec['Add Custom Stored Procedure'],
-      Exec['Publish Custom Handlers'],
+      Exec['Publish Vidyo_SetRecordingAttributes'],
+      Exec['Publish CustomGenericObjectDisconnect'],
     ],
   }
 
