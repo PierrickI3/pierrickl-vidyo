@@ -107,7 +107,7 @@ class vidyo (
     $roomgroup = 'VidyoIntegrationGroup',
     $roomowner = $vidyoadmin,
     $extensionprefix,
-    $cicserver = $hostname,
+    $cicserver = 'localhost',
     $usewindowsauth = false,
     $cicusername = 'vagrant',
     $cicpassword = '1234',
@@ -115,6 +115,15 @@ class vidyo (
     $addininstall = false,
 )
 {
+
+  $vidyoserviceinstallerdownloadurl                = 'https://onedrive.live.com/download?resid=181212A4EB2683F0!5963&authkey=!AON7UCxL06q40Mk&ithint=file%2cmsi'
+  $setrecordingattributeshandlerdownloadurl        = 'https://onedrive.live.com/download?resid=181212A4EB2683F0!5976&authkey=!AAt-9yqo7AwWxU0&ithint=file%2ci3pub'
+  $customgenericobjectdisconnecthandlerdownloadurl = 'https://onedrive.live.com/download?resid=181212A4EB2683F0!5977&authkey=!AAMdH_SfAFNIwug&ithint=file%2ci3pub'
+  $clientaddininstallerdownloadurl                 = 'https://onedrive.live.com/download?resid=181212A4EB2683F0!5960&authkey=!AFFKpxg-HSAx4Jo&ithint=file%2cmsi'
+  $vidyowebsitedownloadurl                         = 'https://onedrive.live.com/download?resid=181212A4EB2683F0!5964&authkey=!AMS4ku2lPI487-s&ithint=file%2czip'
+  $ininwebsitedownloadurl                          = 'https://onedrive.live.com/download?resid=181212A4EB2683F0!5968&authkey=!ACakNrqbSG0IF7U&ithint=file%2czip'
+  $customstoredproceduredownloadurl                = 'https://onedrive.live.com/download?resid=181212A4EB2683F0!5967&authkey=!ALUAsX1Jb9SHjqg&ithint=file%2csql'
+  $sqlpowershelltoolsdownloadurl                   = 'https://download.microsoft.com/download/1/3/0/13089488-91FC-4E22-AD68-5BE58BD5C014/ENU/x86/PowerShellTools.msi'
 
   if ($::operatingsystem != 'Windows')
   {
@@ -149,7 +158,7 @@ class vidyo (
 
   # Copy MSIs from Dropbox
   exec {'Download Service Installer':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5963&authkey=!AON7UCxL06q40Mk&ithint=file%2cmsi','${cache_dir}/vidyoserviceinstaller.msi')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('${vidyoserviceinstallerdownloadurl}','${cache_dir}/vidyoserviceinstaller.msi')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -340,7 +349,7 @@ class vidyo (
   }
 
   exec {'Download Vidyo_SetRecordingAttributes.i3pub':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5976&authkey=!AAt-9yqo7AwWxU0&ithint=file%2ci3pub','${cache_dir}/Vidyo_SetRecordingAttributes.i3pub')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('${setrecordingattributeshandlerdownloadurl}','${cache_dir}/Vidyo_SetRecordingAttributes.i3pub')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -348,7 +357,7 @@ class vidyo (
   }
 
   exec {'Download CustomGenericObjectDisconnect.i3pub':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5977&authkey=!AAMdH_SfAFNIwug&ithint=file%2ci3pub','${cache_dir}/CustomGenericObjectDisconnect.i3pub')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('${customgenericobjectdisconnecthandlerdownloadurl}','${cache_dir}/CustomGenericObjectDisconnect.i3pub')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -383,7 +392,7 @@ class vidyo (
 
   # Download and copy VidyoAddinInstaller to install folder
   exec {'Download Client add-in':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5960&authkey=!AFFKpxg-HSAx4Jo&ithint=file%2cmsi','${cache_dir}/vidyoaddininstaller.msi')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('${clientaddininstallerdownloadurl}','${cache_dir}/vidyoaddininstaller.msi')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -416,7 +425,7 @@ class vidyo (
 
   # Download and copy sample web site to C:\inetpub\wwwroot\vidyoweb
   exec {'Download vidyoweb web site':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5964&authkey=!AMS4ku2lPI487-s&ithint=file%2czip','${cache_dir}/vidyoweb.zip')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('${vidyowebsitedownloadurl}','${cache_dir}/vidyoweb.zip')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -447,7 +456,7 @@ class vidyo (
 
   # Download and copy generic (inin) customer web site to C:\inetpub\wwwroot\inin
   exec {'Download inin web site':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5968&authkey=!ACakNrqbSG0IF7U&ithint=file%2czip','${cache_dir}/ininweb.zip')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('${ininwebsitedownloadurl}','${cache_dir}/ininweb.zip')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -525,7 +534,7 @@ class vidyo (
   ########################
 
   exec {'Download Custom Stored Procedure':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://onedrive.live.com/download?resid=181212A4EB2683F0!5967&authkey=!ALUAsX1Jb9SHjqg&ithint=file%2csql','${cache_dir}/vidyo_set_custom_attribute.sql')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('${customstoredproceduredownloadurl}','${cache_dir}/vidyo_set_custom_attribute.sql')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -533,7 +542,7 @@ class vidyo (
   }
 
   exec {'Download SQL Powershell Tools':
-    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('https://download.microsoft.com/download/1/3/0/13089488-91FC-4E22-AD68-5BE58BD5C014/ENU/x86/PowerShellTools.msi','${cache_dir}/PowerShellTools.msi')",
+    command  => "\$wc = New-Object System.Net.WebClient;\$wc.DownloadFile('${sqlpowershelltoolsdownloadurl}','${cache_dir}/PowerShellTools.msi')",
     path     => $::path,
     cwd      => $::system32,
     timeout  => 900,
@@ -565,10 +574,9 @@ class vidyo (
 
   # Add Interaction Center dependency (CIC needs to start before the integration server)
   exec {'Add Interaction Center Dependency':
-    command  => 'cmd /c "sc config \"VidyoIntegrationService\" depend=\"Interaction Center\""',
+    command  => "sc config VidyoIntegrationService depend= \"Interaction Center\"",
     path     => $::path,
     cwd      => $::system32,
-    provider => windows,
     require => [
       File_Line['Configure User Service Endpoint'],
       File_Line['Configure Admin Service Endpoint'],
