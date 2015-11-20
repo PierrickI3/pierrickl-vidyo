@@ -1,3 +1,4 @@
 2015-11-12: Original commit
 2015-11-12: Fixed backslash issue on Windows
 2015-11-18: Fixed service dependency
+2015-11-20: Fixed sqlps module not being found
