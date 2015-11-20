@@ -1,3 +1,7 @@
+# Refresh import module path
+$env:PSModulePath = (Get-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Session Manager\Environment' -Name PSModulePath).PSModulePath
+
+# Import SQL Module
 Import-Module sqlps -DisableNameChecking
 
 # Connect to I3_IC
