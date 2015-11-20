@@ -1,6 +1,6 @@
 {
   "name": "PierrickL-vidyo",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "Pierrick Lozach",
   "summary": "Installs and configures ININ's Vidyo integration with CIC",
   "license": "Apache 2.0",
